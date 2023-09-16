@@ -45,6 +45,7 @@ class GeometryImport:
                  z coordinates of all the points of the imported part.
         """
         mesh = trimesh.load_mesh(self.filename)
+
         number_sampling_points = 100000
         pointcloud, _ = trimesh.sample.sample_surface_even(mesh, number_sampling_points)
 
@@ -199,7 +200,8 @@ class GeometryImport:
             elif x_coor < 0 <= y_coor:
                 quadrant2.append((x_coor, y_coor))
             elif x_coor < 0 and y_coor < 0:
-                quadrant3.append((x_coor, y_coor))
+                quadrant
+                3.append((x_coor, y_coor))
             else:
                 quadrant4.append((x_coor, y_coor))
 
