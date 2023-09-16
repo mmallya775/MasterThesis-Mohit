@@ -1,3 +1,9 @@
+"""
+A python library to that uses trimesh library to import a stl part, samples a set number of points on the surface
+of the part and carries out operations so that a sequential set of points according to the path planning strategy
+are generated which can be used to develop RAPID codes for ABB robots.
+"""
+
 import trimesh
 import math
 import numpy as np
@@ -103,11 +109,11 @@ class GeometryImport:
 
         Returns
         _______
-            common_array: ndarray
+            layered_array: ndarray
                 A ndarray consisting of the x,y,z coordinates of the layered part.
         """
         x, y, z = self.get_points()
-        height_each_layer = 4
+        height_each_layer = 8
         number_of_layers = (max(z) - min(z)) / height_each_layer
 
         z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
@@ -131,9 +137,9 @@ class GeometryImport:
             selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
             global_selected_points.extend(selected_points)
 
-        common_array = np.asarray(global_selected_points)
+        layered_array = np.asarray(global_selected_points)
 
-        return common_array
+        return layered_array
 
     def points_visualization(self) -> None:
         """
@@ -159,7 +165,14 @@ class GeometryImport:
         """
         This static function takes in the set of points x,y for the current layer in layer_part method and then returns
         two arrays x_arranged and y_arranged of these points re-arranged to trace the outer contour of the part by
-        dividing them into 4 quadrants of the graph and arranging the according to their specific strategy.
+        dividing them into 4 quadrants of the graph and arranging the according to their specific strategy. For moving
+        from first quadrant to the fourth quadrant, we have used the following strategy:
+            - In the first quadrant, the x value is constantly decreasing and the y value is constantly increasing.
+            - In the second quadrant, the x value as well as the y value is constantly decreasing.
+            - In the third quadrant, the x value is constantly increasing and the y value is constantly decreasing.
+            - In the fourth quadrant, the x value as well as the y value is constantly increasing.
+        Each quadrant array is sorted according to the above strategy and all the four quadrant arrays are then split
+        into separate x_arranged and y_arranged arrays which are returned as ndarray.
 
         Parameters
         __________
