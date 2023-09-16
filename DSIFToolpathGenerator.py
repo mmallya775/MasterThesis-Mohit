@@ -30,10 +30,23 @@ class MyMainWindow(MainWindow):
         vlayout.addWidget(self.plotter.interactor)
         self.signal_close.connect(self.plotter.close)
 
+        # Create a horizontal layout for the button
+        button_layout = QtWidgets.QHBoxLayout()
+
+        # Create a spacer to push the button to the middle
+        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        button_layout.addItem(spacer)
+
         # Create a button to add the surface
         self.add_surface_button = QtWidgets.QPushButton('Add Surface', self.plot_frame)  # Add button to plot_frame
+        self.add_surface_button.setFixedSize(190, 40)  # Set the size
         self.add_surface_button.clicked.connect(self.add_surface)
-        vlayout.addWidget(self.add_surface_button)
+
+        # Add the button to the horizontal layout
+        button_layout.addWidget(self.add_surface_button)
+
+        # Add the horizontal layout to the main layout
+        vlayout.addLayout(button_layout)
 
         # Set the layout of the main window
         self.setCentralWidget(self.plot_frame)
