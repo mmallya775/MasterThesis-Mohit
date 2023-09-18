@@ -18,7 +18,7 @@ class GeometryImport:
         Initializes an GeometryImport object.
 
         Parameters
-        __________
+        ----------
             filepath : str
                 The path of the stl file stored on the computer.
         """
@@ -32,11 +32,11 @@ class GeometryImport:
         .
 
         Parameters
-        __________
-        None
+        ----------
+
 
         Returns
-        _______
+        -------
                 x : ndarray
                  x coordinates of all the points of the imported part.
                 y : ndarray
@@ -64,7 +64,7 @@ class GeometryImport:
         (0,0,0).
 
         Parameters
-        __________
+        ----------
             x: ndarray
              x-coordinates array of the imported geometry.
             y: ndarray
@@ -73,7 +73,7 @@ class GeometryImport:
              z-coordinates array of the imported geometry.
 
         Returns
-        _______
+        -------
             x: ndarray
              x-coordinates array shifted to origin.
             y: ndarray
@@ -97,7 +97,7 @@ class GeometryImport:
 
         return x, y, z
 
-    def layer_part(self) -> np.ndarray:
+    def layer_part(self, method='qhull') -> np.ndarray:
         """
         This function layers the imported geometry in the z direction specified by a layer height, projects the x,y
         points of neighboring region of +/- 0.5mm on current z_layer height onto the current z-plane and then applied
@@ -105,16 +105,16 @@ class GeometryImport:
         in the current z plane.
 
         Parameters
-        __________
-        None
+        ----------
 
         Returns
-        _______
+        -------
             layered_array: ndarray
                 A ndarray consisting of the x,y,z coordinates of the layered part.
         """
+
         x, y, z = self.get_points()
-        height_each_layer = 8
+        height_each_layer = 2
         number_of_layers = (max(z) - min(z)) / height_each_layer
 
         z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
@@ -127,7 +127,7 @@ class GeometryImport:
                     y_r.append(y[i])
                     z_r.append(z_lay)
             data = np.vstack((x_r, y_r)).T
-            num_resampled_points = 50
+            num_resampled_points = 40
             kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='lloyd')
             kmeans.fit(data)
             resampled = kmeans.cluster_centers_
@@ -148,12 +148,10 @@ class GeometryImport:
         layer_part and plots a 3 dimensional plot of the imported geometry using matplotlib library.
 
         Parameters
-        __________
-        None
+        ----------
 
         Returns
-        _______
-        None
+        -------
         """
         common_array = self.layer_part()
         fig = plt.figure(figsize=(16, 9))
@@ -176,14 +174,14 @@ class GeometryImport:
         into separate x_arranged and y_arranged arrays which are returned as ndarray.
 
         Parameters
-        __________
+        ----------
         x: ndarray
             An array consisting of the x-coordinates of the current layer.
         y: ndarray
             An array consisting of the y-coordinates of the current layer.
 
         Returns
-        _______
+        -------
         x_arranged: ndarray
             An array consisting of x-coordinates arranged in sequential order.
         y_arranged: ndarray
@@ -217,3 +215,45 @@ class GeometryImport:
         y_arranged = sequential_points[:, 1]
 
         return x_arranged, y_arranged
+
+    @staticmethod
+    def plot_contours(data) -> None:
+
+        """
+        Create a 3D line plot with changing colors for each unique z value along with a color bar.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+        An ndarray of shape (n, 3) where each row represents (x, y, z) coordinates.
+
+        Returns
+        -------
+        None
+        """
+
+        # Extract x, y, and z columns
+        x = data[:, 0]
+        y = data[:, 1]
+        z = data[:, 2]
+
+        # Create a figure and 3D axis
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Get unique z values and assign a color to each
+        unique_z = np.unique(z)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(unique_z)))
+
+        # Plot the lines with changing colors
+        for i, z_val in enumerate(unique_z):
+            mask = (z == z_val)
+            ax.plot(x[mask], y[mask], z[mask], color=colors[i], label=f'Z={z_val}')
+
+        # Add labels and legend
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # Show the plot
+        plt.show()
