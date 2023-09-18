@@ -200,8 +200,7 @@ class GeometryImport:
             elif x_coor < 0 <= y_coor:
                 quadrant2.append((x_coor, y_coor))
             elif x_coor < 0 and y_coor < 0:
-                quadrant
-                3.append((x_coor, y_coor))
+                quadrant3.append((x_coor, y_coor))
             else:
                 quadrant4.append((x_coor, y_coor))
 
