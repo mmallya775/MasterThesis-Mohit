@@ -7,8 +7,10 @@ are generated which can be used to develop RAPID codes for ABB robots.
 import trimesh
 import math
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from scipy.spatial import ConvexHull
 
 
 class GeometryImport:
@@ -112,35 +114,65 @@ class GeometryImport:
             layered_array: ndarray
                 A ndarray consisting of the x,y,z coordinates of the layered part.
         """
+        if method == 'KMeans':
+            x, y, z = self.get_points()
+            height_each_layer = 1
+            number_of_layers = (max(z) - min(z)) / height_each_layer
 
-        x, y, z = self.get_points()
-        height_each_layer = 2
-        number_of_layers = (max(z) - min(z)) / height_each_layer
+            z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
+            global_selected_points = []
+            for z_lay in z_int:
+                x_r, y_r, z_r = [], [], []
+                for i in range(len(x)):
+                    if z[i] - 0.001 < z_lay < z[i] + 0.001:
+                        x_r.append(x[i])
+                        y_r.append(y[i])
+                        z_r.append(z_lay)
+                data = np.vstack((x_r, y_r)).T
+                num_resampled_points = 40
+                kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='lloyd')
+                kmeans.fit(data)
+                resampled = kmeans.cluster_centers_
 
-        z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
-        global_selected_points = []
-        for z_lay in z_int:
-            x_r, y_r, z_r = [], [], []
-            for i in range(len(x)):
-                if z[i] - 0.5 < z_lay < z[i] + 0.5:
-                    x_r.append(x[i])
-                    y_r.append(y[i])
-                    z_r.append(z_lay)
-            data = np.vstack((x_r, y_r)).T
-            num_resampled_points = 40
-            kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='lloyd')
-            kmeans.fit(data)
-            resampled = kmeans.cluster_centers_
+                x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
+                z_resampled = np.full((num_resampled_points, 1), z_lay)
+                x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
+                selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
+                global_selected_points.extend(selected_points)
 
-            x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
-            z_resampled = np.full((num_resampled_points, 1), z_lay)
-            x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
-            selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
-            global_selected_points.extend(selected_points)
+            layered_array = np.asarray(global_selected_points)
 
-        layered_array = np.asarray(global_selected_points)
+            return layered_array
+        else:
+            x, y, z = self.get_points()
+            height_each_layer = 1
+            number_of_layers = (max(z) - min(z)) / height_each_layer
 
-        return layered_array
+            z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
+            global_selected_points = []
+            for z_lay in z_int:
+                x_r, y_r, z_r = [], [], []
+                for i in range(len(x)):
+                    if z[i] - 0.2 < z_lay < z[i] + 0.2:
+                        x_r.append(x[i])
+                        y_r.append(y[i])
+                        z_r.append(z_lay)
+                data = np.vstack((x_r, y_r)).T
+                hull = ConvexHull(data)
+                resampled = data[hull.vertices]
+                x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
+                z_resampled = np.ones(resampled.shape[0]) * z_lay
+
+                x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
+                selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
+                global_selected_points.extend(selected_points)
+
+            layered_array = np.asarray(global_selected_points)
+
+            df = pd.DataFrame(layered_array, columns=['X', 'Y', 'Z'])
+            # df.to_excel("data.xlsx", index=False)
+
+            return layered_array
 
     def points_visualization(self) -> None:
         """
@@ -220,7 +252,7 @@ class GeometryImport:
     def plot_contours(data) -> None:
 
         """
-        Create a 3D line plot with changing colors for each unique z value along with a color bar.
+        Plot outer contours with changing colors for each unique z value along with a color bar.
 
         Parameters
         ----------
@@ -248,12 +280,22 @@ class GeometryImport:
         # Plot the lines with changing colors
         for i, z_val in enumerate(unique_z):
             mask = (z == z_val)
-            ax.plot(x[mask], y[mask], z[mask], color=colors[i], label=f'Z={z_val}')
+            x_level = x[mask]
+            y_level = y[mask]
+            z_level = z[mask]
+
+            # Connect the last and first points to form a closed contour
+            x_level = np.append(x_level, x_level[0])
+            y_level = np.append(y_level, y_level[0])
+            z_level = np.append(z_level, z_level[0])
+
+            ax.plot(x_level, y_level, z_level, color=colors[i])
 
         # Add labels and legend
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
+        ax.grid(False)
         # Show the plot
         plt.show()
