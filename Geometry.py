@@ -99,7 +99,7 @@ class GeometryImport:
 
         return x, y, z
 
-    def layer_part(self, method='qhull') -> np.ndarray:
+    def layer_part(self, method='Convex-Hull') -> np.ndarray:
         """
         This function layers the imported geometry in the z direction specified by a layer height, projects the x,y
         points of neighboring region of +/- 0.5mm on current z_layer height onto the current z-plane and then applied
