@@ -4,13 +4,14 @@ of the part and carries out operations so that a sequential set of points accord
 are generated which can be used to develop RAPID codes for ABB robots.
 """
 
-import trimesh
 import math
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
+import trimesh
 from scipy.spatial import ConvexHull
+from sklearn.cluster import KMeans
 
 
 class GeometryImport:
@@ -49,7 +50,7 @@ class GeometryImport:
         mesh = trimesh.load_mesh(self.filename)
 
         number_sampling_points = 100000
-        pointcloud, _ = trimesh.sample.sample_surface_even(mesh, number_sampling_points)
+        pointcloud, _ = trimesh.sample.sample_surface(mesh, number_sampling_points)
 
         x = np.asarray(pointcloud[:, 0])
         y = np.asarray(pointcloud[:, 1])
@@ -102,9 +103,9 @@ class GeometryImport:
     def layer_part(self, method='Convex-Hull') -> np.ndarray:
         """
         This function layers the imported geometry in the z direction specified by a layer height, projects the x,y
-        points of neighboring region of +/- 0.5mm on current z_layer height onto the current z-plane and then applied
-        the KMeans clustering machine learning algorithm of the scikit-learn library to get a specified numer of points
-        in the current z plane.
+        points of neighboring region of +/- 0.2mm on current z_layer height onto the current z-plane and then applies
+        the ConvexHull algorithm of the SciPy library to get a outer contour of the current layer. The coordinates of
+        the outer contour along with the current layer height can sequenced and then sent to the RAPID Code generator.
 
         Parameters
         ----------
@@ -116,7 +117,7 @@ class GeometryImport:
         """
         if method == 'KMeans':
             x, y, z = self.get_points()
-            height_each_layer = 1
+            height_each_layer = 0.5
             number_of_layers = (max(z) - min(z)) / height_each_layer
 
             z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
@@ -145,7 +146,7 @@ class GeometryImport:
             return layered_array
         else:
             x, y, z = self.get_points()
-            height_each_layer = 1
+            height_each_layer = 0.5
             number_of_layers = (max(z) - min(z)) / height_each_layer
 
             z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
@@ -296,6 +297,16 @@ class GeometryImport:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
+        ax.set_xlim(-80, 80)
+        ax.set_ylim(-80, 80)
+        ax.set_zlim(-25, 25)
+
         ax.grid(False)
         # Show the plot
         plt.show()
+
+    def first_robot(self):
+        """
+        This code automatically generates a sequenced pointcloud for the first robot using a specific point shifting
+        algorithm based on our path planning strategy.
+        """
