@@ -146,7 +146,7 @@ class GeometryImport:
             return layered_array
         else:
             x, y, z = self.get_points()
-            height_each_layer = 0.5
+            height_each_layer = 1
             number_of_layers = (max(z) - min(z)) / height_each_layer
 
             z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
@@ -190,6 +190,10 @@ class GeometryImport:
         fig = plt.figure(figsize=(16, 9))
         ax1 = plt.axes(projection='3d')
         ax1.scatter(common_array[:, 0], common_array[:, 1], common_array[:, 2], marker='o', c='r')
+        ax1.set_xlim(-70, 70)
+        ax1.set_ylim(-70, 70)
+        ax1.set_zlim(-70, 70)
+
         plt.show()
 
     @staticmethod
@@ -297,9 +301,9 @@ class GeometryImport:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
-        ax.set_xlim(-80, 80)
-        ax.set_ylim(-80, 80)
-        ax.set_zlim(-25, 25)
+        ax.set_xlim(-70, 70)
+        ax.set_ylim(-70, 70)
+        ax.set_zlim(-70, 70)
 
         ax.grid(False)
         # Show the plot
