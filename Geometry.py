@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import trimesh
 from scipy.spatial import ConvexHull
-from sklearn.cluster import KMeans
 
 
 class GeometryImport:
@@ -100,7 +99,7 @@ class GeometryImport:
 
         return x, y, z
 
-    def layer_part(self, method='Convex-Hull') -> np.ndarray:
+    def layer_part(self) -> np.ndarray:
         """
         This function layers the imported geometry in the z direction specified by a layer height, projects the x,y
         points of neighboring region of +/- 0.2mm on current z_layer height onto the current z-plane and then applies
@@ -115,65 +114,33 @@ class GeometryImport:
             layered_array: ndarray
                 A ndarray consisting of the x,y,z coordinates of the layered part.
         """
-        if method == 'KMeans':
-            x, y, z = self.get_points()
-            height_each_layer = 0.5
-            number_of_layers = (max(z) - min(z)) / height_each_layer
 
-            z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
-            global_selected_points = []
-            for z_lay in z_int:
-                x_r, y_r, z_r = [], [], []
-                for i in range(len(x)):
-                    if z[i] - 0.001 < z_lay < z[i] + 0.001:
-                        x_r.append(x[i])
-                        y_r.append(y[i])
-                        z_r.append(z_lay)
-                data = np.vstack((x_r, y_r)).T
-                num_resampled_points = 40
-                kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='lloyd')
-                kmeans.fit(data)
-                resampled = kmeans.cluster_centers_
+        x, y, z = self.get_points()
+        height_each_layer = 3
+        number_of_layers = (max(z) - min(z)) / height_each_layer
 
-                x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
-                z_resampled = np.full((num_resampled_points, 1), z_lay)
-                x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
-                selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
-                global_selected_points.extend(selected_points)
+        z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
+        global_selected_points = []
+        for z_lay in z_int:
+            x_r, y_r, z_r = [], [], []
+            for i in range(len(x)):
+                if z[i] - 0.2 < z_lay < z[i] + 0.2:
+                    x_r.append(x[i])
+                    y_r.append(y[i])
+                    z_r.append(z_lay)
+            data = np.vstack((x_r, y_r)).T
+            hull = ConvexHull(data)
+            resampled = data[hull.vertices]
+            x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
+            z_resampled = np.ones(resampled.shape[0]) * z_lay
 
-            layered_array = np.asarray(global_selected_points)
+            x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
+            selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
+            global_selected_points.extend(selected_points)
 
-            return layered_array
-        else:
-            x, y, z = self.get_points()
-            height_each_layer = 1
-            number_of_layers = (max(z) - min(z)) / height_each_layer
+        layered_array = np.asarray(global_selected_points)
 
-            z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
-            global_selected_points = []
-            for z_lay in z_int:
-                x_r, y_r, z_r = [], [], []
-                for i in range(len(x)):
-                    if z[i] - 0.2 < z_lay < z[i] + 0.2:
-                        x_r.append(x[i])
-                        y_r.append(y[i])
-                        z_r.append(z_lay)
-                data = np.vstack((x_r, y_r)).T
-                hull = ConvexHull(data)
-                resampled = data[hull.vertices]
-                x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
-                z_resampled = np.ones(resampled.shape[0]) * z_lay
-
-                x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
-                selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
-                global_selected_points.extend(selected_points)
-
-            layered_array = np.asarray(global_selected_points)
-
-            df = pd.DataFrame(layered_array, columns=['X', 'Y', 'Z'])
-            # df.to_excel("data.xlsx", index=False)
-
-            return layered_array
+        return layered_array
 
     def points_visualization(self) -> None:
         """
@@ -309,8 +276,69 @@ class GeometryImport:
         # Show the plot
         plt.show()
 
-    def first_robot(self):
+    @staticmethod
+    def conf_T_ROB1(coordinates) -> np.ndarray:
         """
-        This code automatically generates a sequenced pointcloud for the first robot using a specific point shifting
-        algorithm based on our path planning strategy.
+        A function to determine the robot axes positions for robot 1 based on the total available workspace on the
+        workpiece blank. For the robot ABB IRB IRB 4600-60kg / 2,05m M2004 four values of axis values are used to
+        specify a configuration. These axes are:
+        - cf1 : the quadrant number for axis 1.
+        - cf4 : the quadrant number for axis 4.
+        - cf6 : the quadrant number for axis 6.
+        - cfx : one of the eight possible robot configurations numbered from 0 through 7.
+
+        For more details refer to RAPID Instructions manual.
+
+        Parameters
+        ----------
+        coordinates : np.ndarray
+            A ndarray consisting of columns of x, y and z coordinates of the robot path.
+
+        Returns
+        -------
+        confdata : np.ndarray
+            A ndarray consisting of the configuration data for T_ROB1.
         """
+
+        y = coordinates[:, 1]
+
+        confdata = []
+        cf1, cf4, cf6, cfx = [], [], [], []
+
+        for y_c in y:
+
+            if y_c >= 0:
+                cf1.append(0)
+                cf4.append(-1)
+                cf6.append(0)
+                cfx.append(0)
+
+            else:
+                cf1.append(-1)
+                cf4.append(0)
+                cf6.append(-1)
+                cfx.append(0)
+
+            confdata = np.column_stack((cf1, cf4, cf6, cfx))
+
+        print(confdata)
+
+        return confdata
+
+    @staticmethod
+    def rot_T_ROB1(coordinates):
+        """
+        Determines rotation array for the end effector
+        :param coordinates:
+        :return:
+        """
+
+        leng = len(coordinates[:, 0])
+
+        q1 = np.full((leng, 1), 0)
+        q2 = np.full((leng, 1), 0)
+        q3 = np.full((leng, 1), 1)
+        q4 = np.full((leng, 1), 0)
+        q = np.column_stack((q1, q2, q3, q4))
+
+        print(q)
