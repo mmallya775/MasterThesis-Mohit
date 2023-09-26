@@ -8,9 +8,9 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import trimesh
-from scipy.spatial import ConvexHull
+from scipy.spatial import distance
+from sklearn.cluster import KMeans
 
 
 class GeometryImport:
@@ -116,25 +116,33 @@ class GeometryImport:
         """
 
         x, y, z = self.get_points()
-        height_each_layer = 3
+        height_each_layer = 1
         number_of_layers = (max(z) - min(z)) / height_each_layer
 
-        z_int = np.linspace(min(z), max(z), math.ceil(number_of_layers))
+        z_int = np.linspace(min(z), max(z), math.floor(number_of_layers))
         global_selected_points = []
         for z_lay in z_int:
             x_r, y_r, z_r = [], [], []
             for i in range(len(x)):
-                if z[i] - 0.2 < z_lay < z[i] + 0.2:
+                if z[i] - 0.18 < z_lay < z[i] + 0.18:
                     x_r.append(x[i])
                     y_r.append(y[i])
                     z_r.append(z_lay)
+
             data = np.vstack((x_r, y_r)).T
-            hull = ConvexHull(data)
-            resampled = data[hull.vertices]
+            num_resampled_points = 55
+            kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='elkan')
+            kmeans.fit(data)
+            resampled = kmeans.cluster_centers_
+            # data = np.vstack((x_r, y_r)).T
+            # hull = ConvexHull(data)
+            # resampled = data[hull.vertices]
+            # x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
+            # z_resampled = np.ones(resampled.shape[0]) * z_lay
             x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
-            z_resampled = np.ones(resampled.shape[0]) * z_lay
 
             x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
+            z_resampled = np.full((len(x_arranged), 1), z_lay)
             selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
             global_selected_points.extend(selected_points)
 
@@ -154,71 +162,18 @@ class GeometryImport:
         -------
         """
         common_array = self.layer_part()
+        # df = pd.DataFrame(data=common_array)
+        # df.to_excel("points_data.xlsx")
+
         fig = plt.figure(figsize=(16, 9))
         ax1 = plt.axes(projection='3d')
-        ax1.scatter(common_array[:, 0], common_array[:, 1], common_array[:, 2], marker='o', c='r')
+        ax1.plot(common_array[:, 0], common_array[:, 1], common_array[:, 2], marker='o', c='r')
         ax1.set_xlim(-70, 70)
         ax1.set_ylim(-70, 70)
         ax1.set_zlim(-70, 70)
 
         plt.show()
 
-    @staticmethod
-    def sequence_points(x, y) -> tuple[np.ndarray, np.ndarray]:
-        """
-        This static function takes in the set of points x,y for the current layer in layer_part method and then returns
-        two arrays x_arranged and y_arranged of these points re-arranged to trace the outer contour of the part by
-        dividing them into 4 quadrants of the graph and arranging the according to their specific strategy. For moving
-        from first quadrant to the fourth quadrant, we have used the following strategy:
-            - In the first quadrant, the x value is constantly decreasing and the y value is constantly increasing.
-            - In the second quadrant, the x value as well as the y value is constantly decreasing.
-            - In the third quadrant, the x value is constantly increasing and the y value is constantly decreasing.
-            - In the fourth quadrant, the x value as well as the y value is constantly increasing.
-        Each quadrant array is sorted according to the above strategy and all the four quadrant arrays are then split
-        into separate x_arranged and y_arranged arrays which are returned as ndarray.
-
-        Parameters
-        ----------
-        x: ndarray
-            An array consisting of the x-coordinates of the current layer.
-        y: ndarray
-            An array consisting of the y-coordinates of the current layer.
-
-        Returns
-        -------
-        x_arranged: ndarray
-            An array consisting of x-coordinates arranged in sequential order.
-        y_arranged: ndarray
-            An array consisting of y-coordinates arranged in sequential order
-        """
-
-        points = np.column_stack((x, y))
-
-        quadrant1, quadrant2, quadrant3, quadrant4 = [], [], [], []
-
-        for x_coor, y_coor in points:
-            if x_coor >= 0 and y_coor >= 0:
-                quadrant1.append((x_coor, y_coor))
-            elif x_coor < 0 <= y_coor:
-                quadrant2.append((x_coor, y_coor))
-            elif x_coor < 0 and y_coor < 0:
-                quadrant3.append((x_coor, y_coor))
-            else:
-                quadrant4.append((x_coor, y_coor))
-
-        quadrant1, quadrant2, quadrant3, quadrant4 = (np.array(quadrant1), np.array(quadrant2), np.array(quadrant3),
-                                                      np.array(quadrant4))
-
-        sorted_quadrant1 = quadrant1[np.lexsort((quadrant1[:, 1], -quadrant1[:, 0]))]
-        sorted_quadrant2 = quadrant2[np.lexsort((-quadrant2[:, 1], -quadrant2[:, 0]))]
-        sorted_quadrant3 = quadrant3[np.lexsort((-quadrant3[:, 1], quadrant3[:, 0]))]
-        sorted_quadrant4 = quadrant4[np.lexsort((quadrant4[:, 1], quadrant4[:, 0]))]
-
-        sequential_points = np.concatenate((sorted_quadrant1, sorted_quadrant2, sorted_quadrant3, sorted_quadrant4))
-        x_arranged = sequential_points[:, 0]
-        y_arranged = sequential_points[:, 1]
-
-        return x_arranged, y_arranged
 
     @staticmethod
     def plot_contours(data) -> None:
@@ -342,3 +297,52 @@ class GeometryImport:
         q = np.column_stack((q1, q2, q3, q4))
 
         print(q)
+
+    @staticmethod
+    def sequence_points(x, y) -> tuple[np.ndarray, np.ndarray]:
+        """
+        This function is used to sequence a given set of points from the first point in the quadrant 1 of the current
+        set of points whose coordinates are shifted to have origin at the center of the pointcloud.
+
+        Parameters
+        ----------
+        x: ndarray
+            An array consisting of the x-coordinates of the current layer.
+        y: ndarray
+            An array consisting of the y-coordinates of the current layer.
+
+        Returns
+        -------
+        A tuple containing a ndarray of x and y coordinates.
+        """
+        x = np.array(x)
+        y = np.array(y)
+        coordinates = np.vstack((x, y)).T
+        first = coordinates[(coordinates[:, 0] > 0) & (coordinates[:, 1] > 0)]
+
+        if len(first) > 0:
+            # Find the coordinate in the first quadrant closest to y=0
+            nearest_coordinate = first[np.argmin(np.abs(first[:, 1]))]
+
+        start_point = nearest_coordinate
+
+        current_point = start_point
+        connected_points = [start_point]  # Include the start point at the beginning
+        remaining_points = list(coordinates)  # Keep all points in the remaining_points list
+
+        while len(remaining_points) > 0:  # At least 2 points are needed for the loop
+            distances = [distance.euclidean(current_point, point) for point in remaining_points]
+            nearest_index = np.argmin(distances)
+            nearest_point = remaining_points[nearest_index]
+            remaining_points.pop(nearest_index)
+            connected_points.append(nearest_point)
+            current_point = nearest_point
+
+        # Convert the connected points to a NumPy array
+        connected_points = np.array(connected_points)
+
+        # Create a scatter plot of the points
+        x_arranged = connected_points[:, 0]
+        y_arranged = connected_points[:, 1]
+
+        return x_arranged, y_arranged
