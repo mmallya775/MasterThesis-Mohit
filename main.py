@@ -2,7 +2,7 @@ import Geometry
 import RAPIDCodeGenerator
 
 
-filepath = "NewConeCirc.STL"
+filepath = "ConeArbitrary.STL"
 
 g = Geometry.GeometryImport(filepath)
 layer_data = g.layer_part()
