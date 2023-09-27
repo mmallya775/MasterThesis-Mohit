@@ -2,8 +2,8 @@ import Geometry
 import RAPIDCodeGenerator
 from Geometry2 import GeometryImport
 
-filepath = "NewConeCirc.STL"
-
+filepath = "Design Funnnel Type Inside.stl"
+#
 # g = Geometry.GeometryImport(filepath)
 # layer_data = g.layer_part()
 # # print(layer_data)
@@ -17,4 +17,5 @@ filepath = "NewConeCirc.STL"
 # r.MoveL()
 
 g2 = GeometryImport(filepath=filepath)
-g2.points_visualization()
+pointcloud = g2.generate_sequential_contour_points(layer_height=1.6)
+g2.plot_contours(pointcloud)
