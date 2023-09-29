@@ -4,10 +4,6 @@ import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay, distance
 from shapely.geometry import Polygon, MultiPoint
 from shapely.ops import unary_union
-import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D
-from sklearn.cluster import KMeans
-import math
 
 
 class GeometryImport:
@@ -30,7 +26,7 @@ class GeometryImport:
         tuple: A tuple containing three ndarrays representing the x, y, z coordinates of the points, respectively.
         """
         mesh = trimesh.load_mesh(self.filename)
-        number_sampling_points = 140000
+        number_sampling_points = 300000
         pointcloud, _ = trimesh.sample.sample_surface_even(mesh, number_sampling_points)
 
         x = np.asarray(pointcloud[:, 0])
@@ -64,42 +60,6 @@ class GeometryImport:
         z = z - mid_z
 
         return x, y, z
-
-    def layer_part(self) -> np.ndarray:
-        """
-        Layers the imported geometry in the z direction specified by a layer height.
-
-        Returns:
-        ndarray: A ndarray consisting of the x, y, z coordinates of the layered part.
-        """
-        x, y, z = self.get_points()
-        height_each_layer = 1
-        number_of_layers = (max(z) - min(z)) / height_each_layer
-        z_int = np.linspace(min(z), max(z), math.floor(number_of_layers))
-        global_selected_points = []
-
-        for z_lay in z_int:
-            x_r, y_r, z_r = [], [], []
-            for i in range(len(x)):
-                if z[i] - 0.18 < z_lay < z[i] + 0.18:
-                    x_r.append(x[i])
-                    y_r.append(y[i])
-                    z_r.append(z_lay)
-
-            data = np.vstack((x_r, y_r)).T
-            num_resampled_points = 55
-            kmeans = KMeans(n_clusters=num_resampled_points, random_state=0, n_init='auto', algorithm='elkan')
-            kmeans.fit(data)
-            resampled = kmeans.cluster_centers_
-
-            x_resampled, y_resampled = resampled[:, 0], resampled[:, 1]
-            x_arranged, y_arranged = self.sequence_points(x_resampled, y_resampled)
-            z_resampled = np.full((len(x_arranged), 1), z_lay)
-            selected_points = np.column_stack((x_arranged, y_arranged, z_resampled))
-            global_selected_points.extend(selected_points)
-
-        layered_array = np.asarray(global_selected_points)
-        return layered_array
 
     def points_visualization(self) -> None:
         """
@@ -138,8 +98,8 @@ class GeometryImport:
         s = (a + b + c) / 2.0
         areas = (s*(s-a)*(s-b)*(s-c)) ** 0.5
         circum_r = a * b * c / (4.0 * areas)
-        filter = circum_r < 1.0 / alpha
-        triangles = triangles[filter]
+        filters = circum_r < 1.0 / alpha
+        triangles = triangles[filters]
         if len(triangles) == 0:
             return MultiPoint(list(points)).convex_hull
         polygons = [Polygon(triangle) for triangle in triangles]
@@ -186,8 +146,6 @@ class GeometryImport:
 
         all_contour_points_array = np.vstack(all_contour_points)
 
-        df = pd.DataFrame(data=all_contour_points_array)
-        df.to_excel("layerdata.xlsx")
         return all_contour_points_array
 
     @staticmethod
@@ -273,9 +231,9 @@ class GeometryImport:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
-        ax.set_xlim(-70, 70)
-        ax.set_ylim(-70, 70)
-        ax.set_zlim(-70, 70)
+        ax.set_xlim(-120, 120)
+        ax.set_ylim(-120, 120)
+        ax.set_zlim(-120, 120)
 
         ax.grid(False)
         # Show the plot

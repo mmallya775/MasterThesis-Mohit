@@ -1,8 +1,10 @@
-import Geometry
-import RAPIDCodeGenerator
-from Geometry2 import GeometryImport
+# import Geometry
+# import RAPIDCodeGenerator
+import time
+from Geometry3 import GeometryImport
 
-filepath = "Design Funnnel Type Inside.stl"
+filepath = "FromRP.STL"
+start = time.time()
 #
 # g = Geometry.GeometryImport(filepath)
 # layer_data = g.layer_part()
@@ -17,5 +19,8 @@ filepath = "Design Funnnel Type Inside.stl"
 # r.MoveL()
 
 g2 = GeometryImport(filepath=filepath)
-pointcloud = g2.generate_sequential_contour_points(layer_height=1.6)
+pointcloud = g2.generate_sequential_contour_points(layer_height=0.5, alpha_value=0.2)
+end = time.time()
 g2.plot_contours(pointcloud)
+print(end-start)
+
