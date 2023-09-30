@@ -18,12 +18,8 @@ class GeometryImport:
         number_sampling_points = 200000
         pointcloud, _ = trimesh.sample.sample_surface(mesh, number_sampling_points)
 
-        x = np.asarray(pointcloud[:, 0])
-        y = np.asarray(pointcloud[:, 1])
-        z = np.asarray(pointcloud[:, 2])
-
-        x_shifted, y_shifted, z_shifted = self.shift_center(x, y, z)
-        return x_shifted, y_shifted, z_shifted
+        return self.shift_center(np.asarray(pointcloud[:, 0]), np.asarray(pointcloud[:, 1]), np.asarray(pointcloud[:, 2]
+                                                                                                        ))
 
     @staticmethod
     def shift_center(x, y, z) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -69,8 +65,8 @@ class GeometryImport:
         s = (a + b + c) / 2.0
         areas = (s * (s - a) * (s - b) * (s - c)) ** 0.5
         circum_r = a * b * c / (4.0 * areas)
-        filter = circum_r < 1.0 / alpha
-        triangles = triangles[filter]
+        filters = circum_r < 1.0 / alpha
+        triangles = triangles[filters]
         if len(triangles) == 0:
             return MultiPoint(list(points)).convex_hull
         polygons = [pygeos.polygons(triangle) for triangle in triangles]
