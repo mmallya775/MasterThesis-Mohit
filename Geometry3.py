@@ -71,13 +71,9 @@ class GeometryImport:
             return MultiPoint(list(points)).convex_hull
         polygons = [pygeos.polygons(triangle) for triangle in triangles]
 
-        # Using pygeos for union operation
         result = pygeos.union_all(polygons)
 
-        # Convert the result back to a Shapely geometry
         result = loads(pygeos.to_wkb(result))
-
-        return result
 
         return result
 
@@ -107,8 +103,8 @@ class GeometryImport:
                     contour_points = np.column_stack((x, y, np.full_like(x, z_layer)))
                     all_contour_points.append(contour_points)
 
-        common_array = np.vstack(all_contour_points)
-        return common_array
+        # common_array = np.vstack(all_contour_points)
+        return np.vstack(all_contour_points)
 
     @staticmethod
     def plot_contours(data) -> None:
@@ -163,5 +159,4 @@ class GeometryImport:
         ax.set_zlim(-120, 120)
 
         ax.grid(False)
-        # Show the plot
         plt.show()
