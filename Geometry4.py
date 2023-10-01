@@ -7,6 +7,9 @@ from shapely.geometry import MultiPoint, Polygon
 from shapely.wkb import loads
 import multiprocessing
 
+# Add a way to sort the final list of coordinates using the z coordinate and then store the sorted array in a separate
+# np array
+
 
 class GeometryImport:
 
