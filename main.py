@@ -1,10 +1,25 @@
-# import Geometry
+"""# import Geometry
 # import RAPIDCodeGenerator
-import time
-from Geometry3 import GeometryImport
+"""
 
-filepath = "FromRP.STL"
-start = time.time()
+import time
+
+from Geometry4 import GeometryImport
+
+# if __name__ == "__main__":
+#
+#     FILE_PATH = "FromRP.STL"
+#     start = time.time()
+#
+#     g2 = GeometryImport(filepath=FILE_PATH)
+#     # g2.points_visualization()
+#     pointcloud = g2.generate_sequential_contour_points(layer_height=0.5, alpha_value=0.2)
+#     end = time.time()
+#
+#     g2.plot_contours(pointcloud)
+#     print(end-start)
+
+
 #
 # g = Geometry.GeometryImport(filepath)
 # layer_data = g.layer_part()
@@ -14,13 +29,16 @@ start = time.time()
 # # g.rot_T_ROB1(layer_data)
 # g.points_visualization()
 # g.plot_contours(layer_data)
-
+#
 # r = RAPIDCodeGenerator.RAPIDGenerator()
 # r.MoveL()
 
-g2 = GeometryImport(filepath=filepath)
-pointcloud = g2.generate_sequential_contour_points(layer_height=0.5, alpha_value=0.2)
-end = time.time()
-g2.plot_contours(pointcloud)
-print(end-start)
+if __name__ == "__main__":
 
+    FILE_PATH = "FromRP.STL"
+    start_time = time.time()
+    g2 = GeometryImport(filepath=FILE_PATH)
+    pointcloud = g2.parallel_generate_sequential_contour_points(layer_height=0.5, alpha_value=0.2)
+    end_time = time.time()
+    print("Total Processing Time: ", end_time-start_time)
+    g2.plot_contours(pointcloud)
