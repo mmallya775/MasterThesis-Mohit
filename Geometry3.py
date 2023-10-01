@@ -1,21 +1,21 @@
-import numpy as np
-import trimesh
 import matplotlib.pyplot as plt
+import numpy as np
+import pygeos
+import trimesh
 from scipy.spatial import Delaunay
 from shapely.geometry import Polygon, MultiPoint
 from shapely.wkb import loads
-import pygeos
 
 
 class GeometryImport:
 
-    def __init__(self, filepath) -> None:
+    def __init__(self, filepath: str) -> None:
         self.filename = filepath
 
     def get_points(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
         mesh = trimesh.load_mesh(self.filename)
-        number_sampling_points = 200000
+        number_sampling_points = 500_000
         pointcloud, _ = trimesh.sample.sample_surface(mesh, number_sampling_points)
 
         return self.shift_center(np.asarray(pointcloud[:, 0]), np.asarray(pointcloud[:, 1]), np.asarray(pointcloud[:, 2]
@@ -71,11 +71,12 @@ class GeometryImport:
             return MultiPoint(list(points)).convex_hull
         polygons = [pygeos.polygons(triangle) for triangle in triangles]
 
-        result = pygeos.union_all(polygons)
+        # result = pygeos.union_all(polygons)
 
-        result = loads(pygeos.to_wkb(result))
+        # result = loads(pygeos.to_wkb(result))
+        # result = loads(pygeos.to_wkb(pygeos.union_all(polygons)))
 
-        return result
+        return loads(pygeos.to_wkb(pygeos.union_all(polygons)))
 
     def generate_sequential_contour_points(self, alpha_value=0.5, layer_height=1.0) -> np.ndarray:
         x, y, z = self.get_points()
@@ -141,7 +142,7 @@ class GeometryImport:
             x_level = x[mask]
             y_level = y[mask]
             z_level = z[mask]
-
+            print(i)
             # Connect the last and first points to form a closed contour
             x_level = np.append(x_level, x_level[0])
             y_level = np.append(y_level, y_level[0])
