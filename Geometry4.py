@@ -87,7 +87,7 @@ class GeometryImport:
         z_max = np.max(points[:, 2])
 
         # Generating a list of z values where each layer will be generated
-        z_values = list(np.arange(z_min, z_max, layer_height))
+        z_values = list(np.arange(z_min, z_max, layer_height+1))
         n_processes = multiprocessing.cpu_count()
 
         # Dividing z_values into nearly equal chunks for each process
