@@ -85,7 +85,7 @@ class GeometryImport:
 
         z_min = np.min(points[:, 2])
         z_max = np.max(points[:, 2])
-        print(f"Z_Max is : {z_max}")
+
         z_values = list(np.arange(z_min, z_max, layer_height))
         if z_values[-1] != z_max:
             z_values.append(z_max)
