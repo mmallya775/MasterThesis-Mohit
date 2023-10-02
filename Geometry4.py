@@ -85,9 +85,14 @@ class GeometryImport:
 
         z_min = np.min(points[:, 2])
         z_max = np.max(points[:, 2])
-
-        # Generating a list of z values where each layer will be generated
+        print(f"Z_Max is : {z_max}")
         z_values = list(np.arange(z_min, z_max, layer_height))
+        if z_values[-1] != z_max:
+            z_values.append(z_max)
+        # Generating a list of z values where each layer will be generated
+
+        print("Z_values list")
+        print(z_values)
         n_processes = multiprocessing.cpu_count()
 
         # Dividing z_values into nearly equal chunks for each process
@@ -114,7 +119,8 @@ class GeometryImport:
             concave_hull = instance.alpha_shape(layer[:, :2], alpha=alpha_value)
             if concave_hull.is_empty:
                 continue
-            z_layer = z + layer_height / 2.0
+            # z_layer = z + layer_height / 2.0
+            z_layer = z
             if concave_hull.geom_type == 'Polygon':
                 x, y = concave_hull.exterior.xy
                 contour_points = np.column_stack((x, y, np.full_like(x, z_layer)))
@@ -151,8 +157,11 @@ class GeometryImport:
         y = data[:, 1]
         z = data[:, 2]
 
+        print(f"Maximum z value: {max(z)}")
+        print(f"Minimum z value: {min(z)}")
+
         # Create a figure and 3D axis
-        fig = plt.figure()
+        fig = plt.figure(figsize=(16,9))
         ax = fig.add_subplot(111, projection='3d')
 
         # Get unique z values and assign a color to each
@@ -178,9 +187,9 @@ class GeometryImport:
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
-        ax.set_xlim(-120, 120)
-        ax.set_ylim(-120, 120)
-        ax.set_zlim(-120, 120)
+        ax.set_xlim(-100, 100)
+        ax.set_ylim(-100, 100)
+        ax.set_zlim(-100, 100)
 
         ax.grid(False)
         plt.show()
