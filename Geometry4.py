@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pygeos
 import trimesh
 from scipy.spatial import Delaunay
@@ -87,8 +88,7 @@ class GeometryImport:
         z_max = np.max(points[:, 2])
 
         z_values = list(np.arange(z_min, z_max, layer_height))
-        if z_values[-1] != z_max:
-            z_values.append(z_max)
+        z_values.append(z_max)
         # Generating a list of z values where each layer will be generated
 
         print("Z_values list")
@@ -99,28 +99,31 @@ class GeometryImport:
         chunks = [z_values[i::n_processes] for i in range(n_processes)]
 
         with multiprocessing.Pool(n_processes) as pool:
-            args = [(self, chunks[i], alpha_value, layer_height) for i in range(n_processes)]
+            args = [(self, chunks[i], alpha_value, layer_height, z_max) for i in range(n_processes)]
             results = pool.map(self._generate_contours, args)
 
         return np.vstack(results)
 
     @staticmethod
     def _generate_contours(args):
-        instance, z_values, alpha_value, layer_height = args
+        instance, z_values, alpha_value, layer_height, z_max = args
         x, y, z = instance.get_points()
         points = np.column_stack((x, y, z))
 
         all_contour_points = []
 
         for z in z_values:
-            layer = points[(points[:, 2] >= z) & (points[:, 2] < z + layer_height)]
+            if z == z_max:  # if it is the last/topmost layer
+                layer = []
+            else:
+                layer = points[(points[:, 2] >= z) & (points[:, 2] < z + layer_height)]
             if len(layer) == 0:
                 continue
             concave_hull = instance.alpha_shape(layer[:, :2], alpha=alpha_value)
             if concave_hull.is_empty:
                 continue
             # z_layer = z + layer_height / 2.0
-            z_layer = z
+            z_layer = z + layer_height/2
             if concave_hull.geom_type == 'Polygon':
                 x, y = concave_hull.exterior.xy
                 contour_points = np.column_stack((x, y, np.full_like(x, z_layer)))
@@ -157,6 +160,10 @@ class GeometryImport:
         y = data[:, 1]
         z = data[:, 2]
 
+        df = np.array(data)
+        datafrm = pd.DataFrame(df)
+        datafrm.to_excel("checking_all_layers.xlsx")
+
         print(f"Maximum z value: {max(z)}")
         print(f"Minimum z value: {min(z)}")
 
@@ -174,7 +181,7 @@ class GeometryImport:
             x_level = x[mask]
             y_level = y[mask]
             z_level = z[mask]
-            print(i)
+            print(f"Layer Number -> {i+1}")
             # Connect the last and first points to form a closed contour
             x_level = np.append(x_level, x_level[0])
             y_level = np.append(y_level, y_level[0])

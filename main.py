@@ -38,7 +38,7 @@ if __name__ == "__main__":
     FILE_PATH = "FromRP.STL"
     start_time = time.time()
     g2 = GeometryImport(filepath=FILE_PATH)
-    pointcloud = g2.parallel_generate_sequential_contour_points(layer_height=0.5, alpha_value=0.2)
+    pointcloud = g2.parallel_generate_sequential_contour_points(layer_height=0.25, alpha_value=0.2)
     end_time = time.time()
     print("Total Processing Time: ", end_time-start_time)
     g2.plot_contours(pointcloud)
